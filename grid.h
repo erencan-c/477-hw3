@@ -48,7 +48,7 @@ struct Bunny {
 
 struct Grid {
 private:
-    bool is_matched(int x, int y, bool count = true);
+    bool is_matched(int x, int y, int& horizontal_neighbors, int& vertical_neighbors, bool count = true);
 public:
     int width;
     int height;
@@ -56,6 +56,7 @@ public:
     int col;
     glm::ivec2 hovered;
     std::vector<Bunny> grid;
+    std::array<bool, 6> destroyed_colors;
     ModelData model;
     double fall_duration;
     double growth_duration = 50;

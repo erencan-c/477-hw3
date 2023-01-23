@@ -32,11 +32,12 @@ Grid::Grid(const int w, const int h, const int r, const int c, const ModelData m
     grid.resize(r*c, Bunny());
     vertical_distance = (CAMERA_TOP-CAMERA_BOT)/row;
     horizontal_distance = (CAMERA_RIGHT-CAMERA_LEFT)/col;
+    int hor, ver;
     for(size_t i = col; i < grid.size(); i++) {
         bool has_matched = true;
         while(has_matched) {
             grid[i].color = (BunnyColor)((rand() % BCOLOR_YELLOW) + 1);
-            has_matched = is_matched(i % col, i / col, false);
+            has_matched = is_matched(i % col, i / col, hor, ver, false);
         }
         grid[i].pos = glm::ivec2(i % col, i / col);
     }
@@ -113,9 +114,9 @@ bool Grid::fill() {
     return has_filled;
 }
 
-bool Grid::is_matched(int x, int y, bool count) {
-    int horizontal_neighbors = 1;
-    int vertical_neighbors = 1;
+bool Grid::is_matched(int x, int y, int& horizontal_neighbors, int& vertical_neighbors, bool count) {
+    horizontal_neighbors = 1;
+    vertical_neighbors = 1;
     for(int i = y+1; i < row and grid[AT(x,y)].color == grid[AT(x,i)].color; i++) {
         vertical_neighbors += 1;
     }
@@ -130,6 +131,9 @@ bool Grid::is_matched(int x, int y, bool count) {
     }
     // std::cout << x << " " << y << ": " << horizontal_neighbors << " " << vertical_neighbors << "\n";
     bool match = horizontal_neighbors >= 3 or vertical_neighbors >= 3;
+    if(horizontal_neighbors == 5 or vertical_neighbors == 5) {
+        destroyed_colors[grid[AT(x,y)].color] = true;
+    }
     if(count and match) {
         dscore += 1;
     }
@@ -140,13 +144,29 @@ bool Grid::match() {
     const bool output = false;
     bool has_destroyed = false;
     auto backup = grid;
+    int hor_neig = 0;
+    int ver_neig = 0;
     for(int y = 1; y < row; y++) {
         for(int x = 0; x < col; x++) {
             // std::cout << x << ", " << y << "\n";
-            if(is_matched(x, y)) {
+            if(is_matched(x, y, hor_neig, ver_neig) and not backup[AT(x,y)].growing) {
                 backup[AT(x,y)].growing = true;
                 backup[AT(x,y)].growth_t = 0;
                 has_destroyed = true;
+                if(hor_neig == 5) {
+                    if(x >= 2 and x < col-2 and
+                        backup[AT(x-1,y)].color == backup[AT(x,y)].color and backup[AT(x-2,y)].color == backup[AT(x,y)].color
+                        and backup[AT(x+1,y)].color == backup[AT(x,y)].color and backup[AT(x+2,y)].color == backup[AT(x,y)].color) {
+                            if(y > 0) {
+                                backup[AT(x,y-1)].growing = true;
+                                backup[AT(x,y-1)].growth_t = 0;
+                            }
+                            if(y < col-1) {
+                                backup[AT(x,y+1)].growing = true;
+                                backup[AT(x,y+1)].growth_t = 0;
+                            }
+                        }
+                }
             }
         }
     }
